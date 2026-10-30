@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+phi3-env/
+
+# Secrets — never commit
+.env
+
+# App data (your chats and uploaded documents)
+chroma_db/
+data/
+
+# Editor / macOS
+.vscode/
+.DS_Store

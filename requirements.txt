@@ -1,0 +1,14 @@
+# Web API
+fastapi>=0.135.3
+uvicorn>=0.43.0
+python-multipart>=0.0.24     # file uploads
+pydantic>=2.12.5
+python-dotenv>=1.2.2         # reads .env
+
+# Local LLM (Apple Silicon Macs only)
+mlx-lm>=0.31.1
+
+# Document Q&A (RAG)
+PyMuPDF>=1.27.2.2            # imported as "fitz"
+chromadb>=1.5.6
+sentence-transformers>=5.3.0

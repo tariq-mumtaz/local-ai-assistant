@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Chat</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles/chat.css">
+</head>
+
+<body>
+
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-top">
+            <span class="sidebar-title">Conversations</span>
+            <button class="btn-new" onclick="newChat()">+ New</button>
+        </div>
+        <div class="conv-list" id="conv-list">
+            <p class="no-convs">No conversations yet.<br>Start chatting to see history here.</p>
+        </div>
+    </div>
+
+    <!-- MAIN AREA -->
+    <div class="main">
+
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <button class="toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">☰</button>
+            <span class="topbar-title">Chat</span>
+            <span class="conv-id-badge" id="conv-label" style="display:none"></span>
+            <div class="topbar-right">
+                <input type="text" class="api-key-input" id="api-key" value="my-secret-key-123" placeholder="API Key" />
+            </div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+
+            <!-- DOCUMENT PANEL -->
+            <div class="doc-panel">
+                <div class="doc-panel-title">Documents</div>
+                <div class="doc-list" id="doc-list">
+                    <p class="no-docs">No documents uploaded</p>
+                </div>
+                <input type="file" id="file-input" accept="*.*" style="display:none" onchange="uploadFile(this)" />
+                <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+                    + Upload Document
+                </button>
+                <div id="upload-status" class="upload-status"></div>
+            </div>
+
+            <!-- CHAT AREA -->
+            <div class="chat-area">
+                <div class="chat-box" id="chat-box">
+                    <div class="empty-state" id="empty-state">
+                        <p>Select a conversation or start typing</p>
+                    </div>
+                </div>
+                <div class="input-area">
+                    <textarea id="user-input" rows="1"
+                        placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+                        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+                    <button class="send-btn" id="send-btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+   <script src="scripts/chat.js"></script>
+</body>
+
+</html>
