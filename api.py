@@ -5,67 +5,42 @@ Runs a local LLM (Qwen3 via MLX) with streaming chat, per-conversation document
 Q&A (RAG, see rag.py) and conversations saved to disk (see conversation_store.py).
 """
 
-from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Form
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-
-# Importing rag loads the embedding model and opens ChromaDB
-from rag import (
-    store_document,
-    retrieve_relevant_chunks,
-    has_documents,
-    get_document_info,
-    delete_document,
-    clear_all_documents
-)
-from conversation_store import (
-    save_conversation,
-    load_conversation,
-    list_conversations,
-    delete_conversation,
-    rename_conversation
-)
-
-from datetime import datetime,timedelta
-
-from fastapi.responses import StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
-
-# MLX runs models on Apple Silicon (unified CPU/GPU memory)
-from mlx_lm import load, generate, stream_generate
-from mlx_lm.sample_utils import make_sampler, make_logits_processors
-
-import uuid
 import json
 import re
-import os
-import sys
+import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Optional
 
-from dotenv import load_dotenv
-load_dotenv()   # reads .env into os.environ
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
+# MLX runs models on Apple Silicon (unified CPU/GPU memory)
+from mlx_lm import generate, load, stream_generate
+from mlx_lm.sample_utils import make_logits_processors, make_sampler
+from pydantic import BaseModel
+
+from config import API_KEYS, MODEL_NAME
+from conversation_store import (
+    delete_conversation,
+    list_conversations,
+    load_conversation,
+    rename_conversation,
+    save_conversation,
+)
 
 # --- Settings ---------------------------------------------------------------
-
-def load_api_keys():
-    """Read API_KEYS from .env, e.g. API_KEYS=key-one:Tariq,key-two:Client One"""
-    keys = {}
-    for pair in os.getenv("API_KEYS",{}).split(","):
-        if ":" in pair:
-            key,name = pair.split(":",1)
-            keys[key.strip()] = name.strip()
-    return keys
-
-API_KEYS = load_api_keys()
-if not API_KEYS:
-    sys.exit("ERROR: No API keys found. Copy .env.example to .env and set API_KEYS.")
-
-if "change-this-key" in API_KEYS:
-    sys.exit("ERROR: Replace the example key 'change-this-key' in .env with your own key.")
-
+# Importing rag loads the embedding model and opens ChromaDB
+from rag import (
+    clear_all_documents,
+    delete_document,
+    get_document_info,
+    has_documents,
+    retrieve_relevant_chunks,
+    store_document,
+)
 
 # No Hugging Face login needed: the library reads HF_TOKEN from the environment itself
 app = FastAPI(title="My AI API")
@@ -87,7 +62,7 @@ def get_model_cache_path(model_name: str) -> Path:
     safe_name = model_name.replace("/", "--")
     return cache_dir / f"models--{safe_name}"
 
-MODEL_NAME = os.getenv("MODEL_NAME","mlx-community/Qwen3-8B-4bit")
+
 
 
 # Only informs the user; load() below downloads the model if needed
