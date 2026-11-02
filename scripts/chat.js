@@ -10,10 +10,17 @@ function getTime() {
 }
 
 function safeHTML(html) {
-    return html
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-        .replace(/on\w+="[^"]*"/gi, "")
-        .replace(/javascript:/gi, "");
+    if (!window.DOMPurify) {
+        //DOMPurify is missing we will show as text
+        const div = document.createElement("div");
+        div.textContent = html;
+        return div.innerHTML;
+    }
+    return DOMPurify.sanitize(html,{
+        USE_PROFILES: { html: true },
+        FORBID_TAGS: ['style','form','input','button','textarea', 'iframe', 'object', 'embed','select'],
+        FORBID_ATTR : ['style']
+    });
 }
 
 function stripIncompleteTag(text) {
@@ -221,7 +228,7 @@ async function sendMessage() {
                             .replace(/<think>[\s\S]*/gi, "") // incomplete think tag
                             .trim();
 
-                        aiBubble.innerHTML = stripIncompleteTag(displayText) || "...";
+                        aiBubble.innerHTML =safeHTML(stripIncompleteTag(displayText) || "...");
                         // Auto scroll as tokens arrive
                         const chatBox = document.getElementById("chat-box");
                         chatBox.scrollTop = chatBox.scrollHeight;
