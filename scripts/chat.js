@@ -63,7 +63,6 @@ function addMessage(role, text = "", isThinking = false) {
     const chatBox = document.getElementById("chat-box");
 
     const wrapper = document.createElement("div");
-    // wrapper.className = `message ${role}`;
     wrapper.className = `message ${role} message-wrapper`;
     wrapper.id = isThinking ? "thinking-msg" : "";
 
@@ -213,9 +212,6 @@ async function sendMessage() {
                             badge.textContent = `ID: ${cid.slice(0, 8)}...`;
                             badge.style.display = "inline-block";
                         }
-                        // conversationId = data.conversation_id;
-                        // document.getElementById("conv-label").textContent =
-                        //   `ID: ${conversationId.slice(0, 8)}...`;
                     }
 
                     if (data.type === "token") {

@@ -16,3 +16,6 @@ data/
 # Editor / macOS
 .vscode/
 .DS_Store
+
+# Personal learning notes
+NOTES.md
