@@ -6,13 +6,13 @@ stored in ChromaDB. For each question, the closest chunks are retrieved and adde
 to the prompt so the model can answer from the document.
 """
 
-import fitz  # PyMuPDF
-import chromadb
 import re
-from sentence_transformers import SentenceTransformer
-from typing import List
 import uuid
+from typing import List
 
+import chromadb
+import fitz  # PyMuPDF
+from sentence_transformers import SentenceTransformer
 
 # Small (~90 MB) model that maps text to 384-number vectors; loaded once at import
 print("Loading embedding model...")
