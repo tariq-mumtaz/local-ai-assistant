@@ -499,6 +499,16 @@ function clearChat() {
 
 
 // Load conversations when page opens
+// restore the key from localStorage if available
 window.addEventListener("load", () => {
+    const keyInput = document.getElementById("api-key");
+    savedKey = localStorage.getItem("apiKey");
+    keyInput.value = savedKey || "";
+
+    keyInput.addEventListener("change",() =>{
+        localStorage.setItem("apiKey", keyInput.value.trim());
+        loadConversationList();
+    });
+    
     loadConversationList();
 });
