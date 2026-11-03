@@ -8,6 +8,7 @@ Q&A (RAG, see rag.py) and conversations saved to disk (see conversation_store.py
 import json
 import re
 import uuid
+import calendar
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
@@ -364,7 +365,7 @@ def calculate_date_facts(question: str) -> str:
 
     if target_date:
         day_name = target_date.strftime("%A")
-        diff = (target_date - today).days
+        diff = (target_date.date() - today.date()).days
         formatted = target_date.strftime("%d %B %Y")
 
         if lang == "arabic":
@@ -379,9 +380,9 @@ def calculate_date_facts(question: str) -> str:
         else:
             result.append(f"{formatted} falls on a {day_name}.")
             if diff > 0:
-                result.append(f"That is {diff} days from today.")
+                result.append(f"That is {diff} day{'s' if diff != 1 else ''} from today.")
             elif diff < 0:
-                result.append(f"That was {abs(diff)} days ago.")
+                result.append(f"That was {abs(diff)} day{'s' if diff != 1 else ''} ago.")
             else:
                 result.append("That is today.")
 
@@ -410,11 +411,30 @@ def calculate_date_facts(question: str) -> str:
             result.append(f"This day next week is {nw.strftime('%A, %d %B %Y')}.")
 
     if "next year" in q or "السنة القادمة" in question:
-        ny = today.replace(year=today.year + 1)
+        try:
+            ny = today.replace(year=today.year + 1)
+        except ValueError:
+            # Handle February 29 on non-leap years
+            ny = today.replace(year=today.year + 1, day=28)
+            
         if lang == "arabic":
             result.append(f"هذا اليوم السنة القادمة: {ARABIC_DAYS[ny.strftime('%A')]}، {ny.strftime('%d %B %Y')}.")
         else:
             result.append(f"This day next year is {ny.strftime('%A, %d %B %Y')}.")
+
+    if "next month" in q or "الشهر القادم" in question:
+        # Calculate Year and Month for next month; shortened if that month is shorter (31 Jan → 28/29 Feb)
+        year, month = (today.year + 1, 1) if today.month == 12 else (today.year, today.month + 1)
+
+        # Calculate Day for: Clamp to next month's last day, e.g. 31 Jan → 28 Feb (29 in leap years)
+        day = min(today.day, calendar.monthrange(year, month)[1])
+
+        nm = today.replace(year=year, month=month, day=day)
+
+        if lang == "arabic":
+            result.append(f"هذا اليوم الشهر القادم: {ARABIC_DAYS[nm.strftime('%A')]}، {nm.strftime('%d %B %Y')}.")
+        else:
+            result.append(f"This day next month is {nm.strftime('%A, %d %B %Y')}.")
 
     return " ".join(result)
 
