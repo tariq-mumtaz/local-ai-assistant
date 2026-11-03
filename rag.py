@@ -13,6 +13,7 @@ from typing import List
 import chromadb
 import fitz  # PyMuPDF
 from sentence_transformers import SentenceTransformer
+from config import RAG_MAX_DISTANCE
 
 # Small (~90 MB) model that maps text to 384-number vectors; loaded once at import
 print("Loading embedding model...")
@@ -187,13 +188,14 @@ def retrieve_relevant_chunks(
 
         for i, (chunk, meta, dist) in enumerate(zip(chunks, metadatas, distances), 1):
             # Only include reasonably relevant chunks (lower distance = more similar)
-            if dist < 1.5:
+            print(f"[RAG] Chunk {i}, distance : {dist:.4f}, from file: {meta['filename']}")
+            if dist < RAG_MAX_DISTANCE:
                 formatted += f"[From: {meta['filename']} | Excerpt {i}]\n{chunk}\n---\n"
 
         if formatted == "RELEVANT DOCUMENT CONTENT:\n---\n":
             return ""
-
-        formatted += "Answer the user's question using ONLY the document content above. If the answer is not in the documents say so clearly."
+        
+        formatted += "Use the document content above to answer question when it is relevant. If the question is not about the documents, answer normally from general knowledge."
         return formatted
 
     except Exception as e:

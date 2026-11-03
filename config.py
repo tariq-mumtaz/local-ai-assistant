@@ -30,3 +30,6 @@ if "change-this-key" in API_KEYS:
     sys.exit("ERROR: Replace the example key 'change-this-key' in .env with your own key.")
 
 MODEL_NAME = os.getenv("MODEL_NAME", "mlx-community/Qwen3-8B-4bit")
+
+# maximum cosine distance for a chunk to consider relevent, 0 is equal identical meaning
+RAG_MAX_DISTANCE = float(os.getenv("RAG_MAX_DISTANCE","0.08"))
