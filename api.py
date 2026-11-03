@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import Path as PathParam
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 # MLX runs models on Apple Silicon (unified CPU/GPU memory)
 from mlx_lm import generate, load, stream_generate
 from mlx_lm.sample_utils import make_logits_processors, make_sampler
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from config import API_KEYS, MODEL_NAME, SYSTEM_PROMPT_FILE
 from conversation_store import (
@@ -41,6 +42,10 @@ from rag import (
     retrieve_relevant_chunks,
     store_document,
 )
+
+# A conversation ID must be a lowercase UUID, e.g. 5c39c2ca-dd2d-4a6e-82a1-634dc0fe0af6
+# ^ [0-9a-f]{8} - [0-9a-f]{4} - [0-9a-f]{4} - [0-9a-f]{4} - [0-9a-f]{12} $
+UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 
 # No Hugging Face login needed: the library reads HF_TOKEN from the environment itself
 app = FastAPI(title="My AI API")
@@ -99,10 +104,13 @@ conversations = {}
 
 class ChatRequest(BaseModel):
     message:str
-    conversation_id:Optional[str] = None
+    conversation_id:Optional[str] = Field(default=None, pattern=UUID_PATTERN, description="Optional conversation ID to continue an existing chat. If not provided, a new conversation is started.")
 
 def validate_key(api_key:str):
-    """Return the client name for a valid key, or reject the request with 401."""
+    """
+    Return the client name for a valid key, or reject the request with 401.
+    """
+    
     if api_key not in API_KEYS:
         raise HTTPException(status_code=401, detail="Invalid API Key")
     return API_KEYS[api_key]
@@ -525,7 +533,7 @@ def chat_stream(request:ChatRequest,x_api_key: str = Header(...)):
 @app.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    conversation_id: str = Form(...),
+    conversation_id: str = Form(..., pattern=UUID_PATTERN),
     x_api_key: str = Header(...)
 ):
     """Upload a PDF and index it for the given conversation."""
@@ -556,14 +564,14 @@ async def upload_document(
     }
 
 @app.get("/documents/{conv_id}")
-def get_documents(conv_id: str, x_api_key: str = Header(...)):
+def get_documents(conv_id: str= PathParam(pattern=UUID_PATTERN), x_api_key: str = Header(...)):
     """Get info about uploaded documents"""
     validate_key(x_api_key)
     return get_document_info(x_api_key, conv_id)
 
 
 @app.delete("/documents/file/{filename}")
-def remove_document(filename: str, conv_id: str = Header(...), x_api_key: str = Header(...)):
+def remove_document(filename: str, conv_id: str = Header(... , pattern=UUID_PATTERN), x_api_key: str = Header(...)):
     validate_key(x_api_key)
     return delete_document(x_api_key, filename, conv_id)
 
@@ -582,7 +590,7 @@ def get_conversations(x_api_key: str = Header(...)):
     return {"conversations": list_conversations(x_api_key)}
 
 @app.get("/conversations/{conv_id}/load")
-def load_conv(conv_id: str, x_api_key: str = Header(...)):
+def load_conv(conv_id: str = PathParam(pattern=UUID_PATTERN), x_api_key: str = Header(...)):
     """Load a specific conversation"""
     validate_key(x_api_key)
     conv = load_conversation(x_api_key, conv_id)
@@ -602,7 +610,7 @@ def load_conv(conv_id: str, x_api_key: str = Header(...)):
     }
 
 @app.delete("/conversations/{conv_id}")
-def delete_conv(conv_id: str, x_api_key: str = Header(...)):
+def delete_conv(conv_id: str = PathParam(pattern=UUID_PATTERN), x_api_key: str = Header(...)):
     """Delete a conversation"""
     validate_key(x_api_key)
     # if conv_id in conversations:
@@ -612,8 +620,8 @@ def delete_conv(conv_id: str, x_api_key: str = Header(...)):
 
 @app.put("/conversations/{conv_id}/rename")
 def rename_conv(
-    conv_id: str,
     body: dict,
+    conv_id: str = PathParam(pattern=UUID_PATTERN),
     x_api_key: str = Header(...)
 ):
     """Rename a conversation"""

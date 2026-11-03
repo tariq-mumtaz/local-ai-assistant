@@ -2,6 +2,17 @@ const API_URL = "http://localhost:8000";
 let conversationId = null;
 let uploadedDocs = [];
 
+
+// Make text safe to put inside HTML (as content or an attribute value)
+function escapeHTML(text) {
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 function getTime() {
     return new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -301,20 +312,32 @@ function renderConversationList(convs) {
         .map(
             (c) => `
     <div class="conv-item ${c.conv_id === conversationId ? "active" : ""}"
-         id="conv-item-${c.conv_id}"
-         onclick="loadConversation('${c.conv_id}')">
+         id="conv-item-${escapeHTML(c.conv_id)}"
+         data-id="${escapeHTML(c.conv_id)}">
+
       <span class="conv-icon">💬</span>
       <div class="conv-info">
-        <div class="conv-title">${c.title}</div>
-        <div class="conv-date">${c.updated_at}</div>
+        <div class="conv-title">${escapeHTML(c.title)}</div>
+        <div class="conv-date">${escapeHTML(c.updated_at)}</div>
       </div>
-      <button class="conv-del"
-        onclick="event.stopPropagation(); deleteConversation('${c.conv_id}')"
-        title="Delete">✕</button>
+      <button class="conv-del" title="Delete">✕</button>
     </div>
   `,
         )
         .join("");
+    list.querySelectorAll('.conv-item').forEach((item) => {
+        const id = item.dataset.id;
+        const title = item.querySelector(".conv-title").textContent;
+        item.addEventListener("click", () => {
+            loadConversation(id);
+        });
+        item.querySelector(".conv-del").addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (confirm(`Are you sure you want to delete the ${escapeHTML(title)} conversation?`)) {
+                deleteConversation(id);
+            }
+        });
+    })
 }
 
 async function loadConversation(convId) {
@@ -396,14 +419,21 @@ function renderDocList() {
 
     docList.innerHTML = uploadedDocs
         .map(
-            (filename) => `
-        <div class="doc-item" id="doc-${btoa(filename)}">
-            <span class="doc-name" title="${filename}">📄 ${filename}</span>
-            <button class="doc-remove" onclick="removeDocument('${filename}')" title="Remove">✕</button>
+            (filename,i) => `
+        <div class="doc-item">
+            <span class="doc-name" title="${escapeHTML(filename)}">📄 ${escapeHTML(filename)}</span>
+            <button class="doc-remove" data-index="${i}" title="Remove">✕</button>
         </div>
     `,
         )
         .join("");
+
+    // attach event listener to remove files
+    document.querySelectorAll(".doc-remove").forEach(btn => {
+        btn.addEventListener("click", () => {
+            removeDocument(uploadedDocs[parseInt(btn.dataset.index)]);
+        });
+    });
 }
 
 async function loadDocumentList(convId) {
