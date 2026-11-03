@@ -464,6 +464,7 @@ body {
     background: var(--user-bg);
     color: white;
     border-bottom-right-radius: 4px;
+    white-space: pre-wrap;    /* keep line breaks typed with Shift+Enter */
 }
 
 .message.ai .bubble {
