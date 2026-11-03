@@ -4,7 +4,13 @@ import os
 import sys
 
 from dotenv import load_dotenv
+from pathlib import Path
 
+# system prompt: edit prompts/system_prompt.txt to change the system prompt
+SYSTEM_PROMPT_FILE = Path(__file__).parent / os.getenv("SYSTEM_PROMPT_FILE", "prompts/system_prompt.txt")
+if not SYSTEM_PROMPT_FILE.exists():
+    sys.exit(f"ERROR: System prompt file not found: {SYSTEM_PROMPT_FILE}. Copy prompts/system_prompt.txt.example to prompts/system_prompt.txt and edit it.")
+    
 load_dotenv()   # reads .env into os.environ
 
 def load_api_keys():

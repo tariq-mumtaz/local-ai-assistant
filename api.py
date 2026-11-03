@@ -22,7 +22,7 @@ from mlx_lm import generate, load, stream_generate
 from mlx_lm.sample_utils import make_logits_processors, make_sampler
 from pydantic import BaseModel
 
-from config import API_KEYS, MODEL_NAME
+from config import API_KEYS, MODEL_NAME, SYSTEM_PROMPT_FILE
 from conversation_store import (
     delete_conversation,
     list_conversations,
@@ -119,35 +119,50 @@ def clean_response(response: str) -> str:
 
     return response.strip()
 
+def system_prompt() -> str:
+    """
+    read system prompt file and replace {date} with today;s date 
+	%A: Full weekday name (e.g., Tuesday).
+	%d: Day of the month as a zero-padded decimal number (e.g., 03).
+	%B: Full month name (e.g., November).
+	%Y: Four-digit year (e.g., 2026).
+    """
+    text = SYSTEM_PROMPT_FILE.read_text(encoding="utf-8")
+    return text.replace("{today}",datetime.now().strftime("%A, %d %B %Y"))
+
 def build_messages_with_context(
     conversations_list: list,
     user_question: str,
     conv_id: str = None,
     client_id: str = None) -> list:
-    """Add relevant document excerpts and date facts to the messages for this reply."""
+    """
+    System prompt + conversation, with document excerpts and date facts added to the latest question.
+    """
 
-    # Copy so injected context is used for this reply only, not saved to history
-    messages = conversations_list.copy()
-
-    # RAG: inject relevant document chunks if documents uploaded
+    # make a copy 
+    history = conversations_list.copy()
+    
+    #collect extra context and put it in correct order
+    context = []
     if client_id and has_documents(client_id, conv_id):
         relevant = retrieve_relevant_chunks(client_id, user_question, conv_id)
         if relevant:
             print(f"[RAG] Injecting relevant chunks for: '{user_question}'")
-            messages.insert(1, {
-                "role": "system",
-                "content": relevant
-            })
+            context.append(relevant)
 
     # Models are unreliable at calendar maths, so Python computes date facts
     if is_date_question(user_question):
         date_facts = calculate_date_facts(user_question)
-        messages.insert(1, {
-            "role": "system",
-            "content": f"ACCURATE DATE FACTS (use directly): {date_facts}"
-        })
+        context.append(f"ACCURATE DATE FACTS (use directly): {date_facts}")
 
-    return messages
+    #put the context right before the question
+    #a new dictionary so the stored messages are not modified
+    if context and history and history[-1]["role"] == "user":
+        question = history[-1]["content"]
+        history[-1] = {"role":"user","content":"\n\n".join(context) + "\n\nQuestion:" + question}
+
+
+    return  [{"role" : "system", "content":system_prompt()}] + history
 
 
 # --- Date handling ----------------------------------------------------------
@@ -298,7 +313,8 @@ def extract_date_with_model(question: str):
     extraction_prompt = tokenizer.apply_chat_template(
         extraction_messages,
         tokenize=False,
-        add_generation_prompt=True
+        add_generation_prompt=True,
+        enable_thinking=False,   # Qwen3: answer directly, without hidden reasoning
     )
 
     # A date is only a few tokens; temperature 0 for consistent results
@@ -433,6 +449,8 @@ def health(x_api_key: str = Header(...)):
 
 # --- Chat -------------------------------------------------------------------
 
+
+
 @app.post("/chat/stream")
 def chat_stream(request:ChatRequest,x_api_key: str = Header(...)):
     """Stream a reply as Server-Sent Events: conv_id, then tokens, then done."""
@@ -448,26 +466,9 @@ def chat_stream(request:ChatRequest,x_api_key: str = Header(...)):
             conversations[conv_id] = saved["messages"]
             print(f"[STORE] Restored conversation {conv_id} from disk")
 
-    # New conversation: start with the system prompt
+    # New conversation starts empty system prompt will be inject while sending
     if conv_id not in conversations:
-        conversations[conv_id] = [
-            {
-                "role" : "system",
-                "content": f"""You are a helpful honest assistant.
-                Today is {datetime.now().strftime('%A, %d %B %Y')}.
-
-                CRITICAL RULES:
-                - Do not show your reasoning process
-                - For greetings like Hi or Hello reply with one short sentence only
-                - For simple questions give short direct answers
-                - Only give long detailed responses when the question genuinely requires it
-                - Format in HTML only when it adds value
-                - Use <p> for text, <ul><li> for lists, <table> for comparisons
-                - Never include <html> <head> or <body> tags
-                - Never over explain
-                - Never make up facts"""
-            }
-        ]
+        conversations[conv_id] = []
 
     conversations[conv_id].append({
         "role":"user",
@@ -479,7 +480,8 @@ def chat_stream(request:ChatRequest,x_api_key: str = Header(...)):
     prompt = tokenizer.apply_chat_template(
         messages_to_send,
         tokenize=False,
-        add_generation_prompt=True
+        add_generation_prompt=True,
+        enable_thinking=False,   # Qwen3: answer directly, without hidden reasoning
     )
 
     def generate_stream():
