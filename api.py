@@ -613,8 +613,8 @@ def load_conv(conv_id: str = PathParam(pattern=UUID_PATTERN), x_api_key: str = H
 def delete_conv(conv_id: str = PathParam(pattern=UUID_PATTERN), x_api_key: str = Header(...)):
     """Delete a conversation"""
     validate_key(x_api_key)
-    # if conv_id in conversations:
-    #     del conversations[conv_id]
+    if conv_id in conversations:
+        del conversations[conv_id]
     delete_conversation(x_api_key, conv_id)
     return {"status": "deleted"}
 
