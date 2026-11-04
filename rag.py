@@ -13,7 +13,7 @@ from typing import List
 import chromadb
 import fitz  # PyMuPDF
 from sentence_transformers import SentenceTransformer
-from config import RAG_MAX_DISTANCE
+from config import RAG_MAX_DISTANCE, RAG_CHUNK_WORDS, RAG_CHUNK_OVERLAP
 
 # Small (~90 MB) model that maps text to 384-number vectors; loaded once at import
 print("Loading embedding model...")
@@ -66,7 +66,7 @@ def clean_text(text: str) -> str:
 
     return '\n'.join(cleaned_lines)
 
-def split_into_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
+def split_into_chunks(text: str, chunk_size=RAG_CHUNK_WORDS, overlap=RAG_CHUNK_OVERLAP) -> List[str]:
     """Split text into overlapping chunks of chunk_size words."""
     text = clean_text(text)
     words = text.split()

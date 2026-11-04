@@ -32,4 +32,19 @@ if "change-this-key" in API_KEYS:
 MODEL_NAME = os.getenv("MODEL_NAME", "mlx-community/Qwen3-8B-4bit")
 
 # maximum cosine distance for a chunk to consider relevent, 0 is equal identical meaning
-RAG_MAX_DISTANCE = float(os.getenv("RAG_MAX_DISTANCE","0.08"))
+RAG_MAX_DISTANCE = float(os.getenv("RAG_MAX_DISTANCE","0.80"))
+
+
+# Document chunking (in words). Each chunk should fit what the embedding
+RAG_CHUNK_WORDS = int(os.getenv("RAG_CHUNK_WORDS", "150"))
+RAG_CHUNK_OVERLAP = int(os.getenv("RAG_CHUNK_OVERLAP", "30"))
+
+# Check the chunk settings, so a bad value can't break uploads
+if RAG_CHUNK_WORDS < 20:
+    sys.exit("ERROR: RAG_CHUNK_WORDS must be at least 20.")
+
+if RAG_CHUNK_OVERLAP < 0:
+    sys.exit("ERROR: RAG_CHUNK_OVERLAP cannot be negative.")
+
+if RAG_CHUNK_OVERLAP >= RAG_CHUNK_WORDS:
+    sys.exit("ERROR: RAG_CHUNK_OVERLAP must be smaller than RAG_CHUNK_WORDS.")

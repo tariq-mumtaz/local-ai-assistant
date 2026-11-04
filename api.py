@@ -172,7 +172,7 @@ def build_messages_with_context(
         question = history[-1]["content"]
         history[-1] = {"role":"user","content":"\n\n".join(context) + "\n\nQuestion:" + question}
 
-
+    print("[PROMPT] Last message sent to model:\n" + history[-1]["content"])
     return  [{"role" : "system", "content":system_prompt()}] + history
 
 
